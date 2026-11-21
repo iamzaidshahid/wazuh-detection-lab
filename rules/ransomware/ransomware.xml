@@ -1,0 +1,104 @@
+<!--
+Ransomware behavior detection (Sysmon events 1 and 11).
+ATT&CK: T1486, T1490, T1070.004, T1105
+Stage 1: single-event catchers (100200 to 100204)
+Stage 2: frequency escalation (100210 to 100212)
+Stage 3: critical correlation (100220 to 100222)
+Depends on: Sysmon FileCreate config for ransomware extensions (see sysmon/),
+built-in rule 92213 (used by 100201).
+The group wrapper name was not in the PDF and is an assumption.
+-->
+<group name="local,ransomware,">
+
+  <rule id="100200" level="6">
+    <if_group>sysmon_event_11</if_group>
+    <field name="win.eventdata.targetFilename"
+    type="pcre2">(?i)\.(locked|enc|encrypted|crypto|crypt|ransom|wcry|wncry|zepto|cerber|locky)$</field>
+    <description>File created with known ransomware extension</description>
+    <group>ransomware_extension,</group>
+    <mitre><id>T1486</id></mitre>
+  </rule>
+
+  <rule id="100201" level="6">
+    <if_sid>92213</if_sid>
+    <description>Executable dropped in folder commonly used by malware</description>
+    <group>ransomware_dropper,</group>
+    <mitre><id>T1105</id></mitre>
+  </rule>
+
+  <rule id="100202" level="6">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)PowerShell\.EXE</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(Remove-Item|ri\s|rmdir|del\s|erase\s|rd\s)</field>
+    <description>PowerShell deleting files - possible ransomware cleanup</description>
+    <group>ransomware_deletion,</group>
+    <mitre><id>T1486</id><id>T1070.004</id></mitre>
+  </rule>
+
+  <rule id="100203" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(vssadmin|wmic).*(delete|shadowcopy)</field>
+    <description>Shadow copy deletion attempt - critical ransomware indicator</description>
+    <group>ransomware_shadow,</group>
+    <mitre><id>T1490</id></mitre>
+  </rule>
+
+  <rule id="100204" level="8">
+    <if_group>sysmon_event_11</if_group>
+    <field name="win.eventdata.targetFilename"
+    type="pcre2">(?i)(readme|how_to|recover|decrypt|ransom|restore_file|your_files|help_decrypt)\.(txt|html|hta|url)$</field>
+    <description>Possible ransom note file created</description>
+    <group>ransomware_note,</group>
+    <mitre><id>T1486</id></mitre>
+  </rule>
+
+  <rule id="100210" level="13" frequency="10" timeframe="60">
+    <if_matched_sid>100200</if_matched_sid>
+    <same_field>win.eventdata.image</same_field>
+    <description>Mass file encryption detected - single process encrypting rapidly</description>
+    <group>ransomware_masscrypt,</group>
+    <mitre><id>T1486</id></mitre>
+  </rule>
+
+  <rule id="100211" level="13" frequency="5" timeframe="60">
+    <if_matched_sid>100202</if_matched_sid>
+    <description>Mass file deletion detected - possible ransomware cleanup</description>
+    <group>ransomware_massdel,</group>
+    <mitre><id>T1486</id><id>T1070.004</id></mitre>
+  </rule>
+
+  <rule id="100212" level="13" frequency="4" timeframe="120">
+    <if_matched_sid>100204</if_matched_sid>
+    <description>Multiple ransom notes dropped across system directories</description>
+    <group>ransomware_multinote,</group>
+    <mitre><id>T1486</id></mitre>
+  </rule>
+
+  <rule id="100220" level="15" frequency="2" timeframe="120">
+    <if_matched_sid>100210</if_matched_sid>
+    <if_matched_sid>100211</if_matched_sid>
+    <description>CRITICAL: Ransomware confirmed - mass encryption AND mass deletion</description>
+    <group>ransomware_confirmed,</group>
+    <mitre><id>T1486</id></mitre>
+  </rule>
+
+  <rule id="100221" level="15" frequency="2" timeframe="120">
+    <if_matched_sid>100203</if_matched_sid>
+    <if_matched_sid>100210</if_matched_sid>
+    <description>CRITICAL: Shadow copy deletion with mass encryption detected</description>
+    <group>ransomware_confirmed,</group>
+    <mitre><id>T1486</id><id>T1490</id></mitre>
+  </rule>
+
+  <rule id="100222" level="15" frequency="2" timeframe="120">
+    <if_matched_sid>100210</if_matched_sid>
+    <if_matched_sid>100204</if_matched_sid>
+    <description>CRITICAL: Mass encryption AND ransom notes dropped across system</description>
+    <group>ransomware_confirmed,</group>
+    <mitre><id>T1486</id></mitre>
+  </rule>
+
+</group>
