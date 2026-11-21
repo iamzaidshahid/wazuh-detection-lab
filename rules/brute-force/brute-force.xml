@@ -1,0 +1,57 @@
+<!--
+Brute force detection and login success correlation (SSH).
+ATT&CK: T1110, T1110.001, T1078
+Stage 1: single failure catchers (100002, 100004)
+Stage 2: frequency escalation (100003, 100005)
+Stage 3: successful login after brute force (100006, 100007)
+Depends on built-in sshd rules 5710, 5715 and 5760.
+-->
+<group name="local,syslog,sshd,">
+
+  <rule id="100002" level="5">
+    <if_sid>5760</if_sid>
+    <description>Single failed SSH login attempt (valid user)</description>
+    <group>authentication_failed,</group>
+  </rule>
+
+  <rule id="100004" level="5">
+    <if_sid>5710</if_sid>
+    <description>Single failed SSH login attempt (invalid user)</description>
+    <group>authentication_failed,</group>
+  </rule>
+
+  <rule id="100003" level="12" frequency="2" timeframe="120">
+    <if_matched_sid>100002</if_matched_sid>
+    <same_srcip />
+    <description>Brute force: Multiple failures (valid user) same IP</description>
+    <group>brute_force,authentication_failed,</group>
+    <mitre><id>T1110</id><id>T1110.001</id></mitre>
+  </rule>
+
+  <rule id="100005" level="12" frequency="2" timeframe="120">
+    <if_matched_sid>100004</if_matched_sid>
+    <same_srcip />
+    <description>Brute force: Multiple failures (invalid user) same IP</description>
+    <group>brute_force,authentication_failed,</group>
+    <mitre><id>T1110</id><id>T1110.001</id></mitre>
+  </rule>
+
+  <rule id="100006" level="15">
+    <if_matched_sid>100003</if_matched_sid>
+    <if_sid>5715</if_sid>
+    <same_srcip />
+    <description>CRITICAL: Successful login after brute-force - compromise</description>
+    <group>brute_force_success,authentication_success,</group>
+    <mitre><id>T1110</id><id>T1110.001</id><id>T1078</id></mitre>
+  </rule>
+
+  <rule id="100007" level="15">
+    <if_matched_sid>100005</if_matched_sid>
+    <if_sid>5715</if_sid>
+    <same_srcip />
+    <description>CRITICAL: Successful login after brute-force - compromise</description>
+    <group>brute_force_success,authentication_success,</group>
+    <mitre><id>T1110</id><id>T1110.001</id><id>T1078</id></mitre>
+  </rule>
+
+</group>
