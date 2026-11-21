@@ -1,0 +1,67 @@
+<!--
+Process injection detection via Sysmon event 8 (CreateRemoteThread).
+ATT&CK: T1055 (no MITRE tags in the original rules, add them before publishing)
+Layer 1: single events (100300 to 100303)
+Layer 2: frequency (100310, 100311)
+Layer 3: critical (100320, 100321)
+Depends on: an override of built-in rule 61610 to level 3 (mentioned in the
+original report but the block itself was not in the PDF; copy it from the live
+local_rules.xml). The group wrapper name is an assumption.
+-->
+<group name="local,process_injection,">
+
+  <rule id="100300" level="12">
+    <if_group>sysmon_event8</if_group>
+    <field name="win.eventdata.targetImage"
+    type="pcre2">(?i)(lsass\.exe|csrss\.exe|winlogon\.exe|wininit\.exe|smss\.exe)</field>
+    <description>Remote thread injection into critical system process</description>
+    <group>process_injection,</group>
+  </rule>
+
+  <rule id="100301" level="10">
+    <if_group>sysmon_event8</if_group>
+    <field name="win.eventdata.targetImage"
+    type="pcre2">(?i)(svchost\.exe|explorer\.exe|notepad\.exe|mstsc\.exe|rundll32\.exe)</field>
+    <description>Remote thread injection into commonly abused process</description>
+    <group>process_injection,</group>
+  </rule>
+
+  <rule id="100302" level="12">
+    <if_group>sysmon_event8</if_group>
+    <field name="win.eventdata.sourceImage"
+    type="pcre2">(?i)(powershell\.exe|cmd\.exe|wscript\.exe|mshta\.exe)</field>
+    <description>Remote thread creation from suspicious source process</description>
+    <group>process_injection,</group>
+  </rule>
+
+  <rule id="100303" level="13">
+    <if_group>sysmon_event8</if_group>
+    <field name="win.eventdata.targetUser"
+    type="pcre2">SYSTEM</field>
+    <description>Remote thread injected into SYSTEM privilege process</description>
+    <group>process_injection,privilege_escalation,</group>
+  </rule>
+
+  <rule id="100310" level="14" frequency="3" timeframe="120">
+    <if_matched_sid>100302</if_matched_sid>
+    <same_field>win.eventdata.sourceImage</same_field>
+    <description>Multiple remote thread injections from same process</description>
+  </rule>
+
+  <rule id="100311" level="15" frequency="2" timeframe="120">
+    <if_matched_sid>100303</if_matched_sid>
+    <same_field>win.eventdata.sourceImage</same_field>
+    <description>Repeated injection into critical system processes - confirmed attack</description>
+  </rule>
+
+  <rule id="100320" level="15" frequency="2" timeframe="120">
+    <if_matched_sid>100310</if_matched_sid>
+    <description>CRITICAL: Multiple injection campaigns from same process</description>
+  </rule>
+
+  <rule id="100321" level="15" frequency="2" timeframe="60">
+    <if_matched_sid>100303</if_matched_sid>
+    <description>CRITICAL: Repeated injection into SYSTEM privilege processes</description>
+  </rule>
+
+</group>
