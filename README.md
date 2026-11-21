@@ -25,6 +25,21 @@ Every use case follows the same three stages: single-event catchers, frequency e
 - `tests/`: safe test commands for each rule
 - `docs/`: write-ups with problems hit and fixes applied
 
+## Evidence
+Alerts fired by the custom rules in the lab (Wazuh dashboard):
+
+**Brute force**
+![Brute force alert](docs/images/brute-force-alert.png)
+
+**Ransomware behavior**
+![Ransomware alert](docs/images/ransomware-alert.png)
+
+**Data exfiltration**
+![Exfiltration alert](docs/images/exfiltration-alert.png)
+
+**LOLBins abuse**
+![LOLBins alert](docs/images/lolbins-alert.png)
+
 ## Known limitations
 - Tests simulate behavior and verify the rules fire; they are not live malware.
 - 8 of 13 LOLBin rules were verified in the lab; the rest target tools unavailable on the test host.
