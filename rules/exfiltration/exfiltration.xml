@@ -1,0 +1,90 @@
+<!--
+Data exfiltration detection (Sysmon events 1, 3 and 11).
+ATT&CK: T1048, T1071, T1059.001, T1560
+Layer 1: single events (100400, 100402, 100403)
+Layer 2: frequency (100410 to 100412)
+Layer 3: critical (100420 to 100422)
+Depends on: Sysmon FileCreate and NetworkConnect config (see sysmon/),
+built-in rule 92212 (used by 100411).
+Known gap: the original report says 100402 got a negate condition excluding the
+Wazuh agent queue path, but that condition is not in the PDF listing. Copy the
+final version of 100402 from the live local_rules.xml.
+The group wrapper name is an assumption.
+-->
+<group name="local,exfiltration,">
+
+  <rule id="100400" level="8">
+    <if_group>sysmon_event3</if_group>
+    <field name="win.eventdata.image"
+    type="pcre2">(?i)\\(curl|wget|ftp|scp|pscp|winscp|nc|ncat|netcat)\.exe</field>
+    <field name="win.eventdata.protocol">^tcp$</field>
+    <description>Known data transfer tool making outbound TCP connection - possible exfiltration</description>
+    <group>exfiltration_tool,</group>
+    <mitre><id>T1048</id><id>T1071</id></mitre>
+  </rule>
+
+  <rule id="100402" level="10">
+    <if_group>sysmon_event_11</if_group>
+    <field name="win.eventdata.targetFilename"
+    type="pcre2">(?i)\.(zip|rar|7z|tar|gz|bz2)$</field>
+    <field name="win.eventdata.image"
+    type="pcre2">(?i)\\(cmd|wscript|cscript|mshta|rundll32)\.exe</field>
+    <description>Archive created by suspicious process - possible data staging</description>
+    <group>exfiltration_archive,</group>
+    <mitre><id>T1560</id></mitre>
+  </rule>
+
+  <rule id="100403" level="8">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)PowerShell\.EXE</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(Invoke-WebRequest|Invoke-RestMethod|WebClient|UploadFile|UploadString|UploadData|iwr|curl)</field>
+    <description>PowerShell using web request commands - possible data upload/exfiltration</description>
+    <group>exfiltration_powershell,</group>
+    <mitre><id>T1048</id><id>T1059.001</id></mitre>
+  </rule>
+
+  <rule id="100410" level="12" frequency="3" timeframe="120">
+    <if_matched_sid>100400</if_matched_sid>
+    <description>Multiple outbound connections by data transfer tool - high exfiltration risk</description>
+    <group>exfiltration_repeated,</group>
+    <mitre><id>T1048</id></mitre>
+  </rule>
+
+  <rule id="100411" level="13" frequency="3" timeframe="120">
+    <if_matched_sid>92212</if_matched_sid>
+    <description>Multiple archive files created by PowerShell rapidly - data staging confirmed</description>
+    <group>exfiltration_staging,</group>
+    <mitre><id>T1560</id></mitre>
+  </rule>
+
+  <rule id="100412" level="12" frequency="3" timeframe="120">
+    <if_matched_sid>100403</if_matched_sid>
+    <description>Repeated PowerShell web upload commands - sustained exfiltration attempt</description>
+    <group>exfiltration_repeated,</group>
+    <mitre><id>T1048</id><id>T1059.001</id></mitre>
+  </rule>
+
+  <rule id="100420" level="15" frequency="2" timeframe="120">
+    <if_matched_sid>100410</if_matched_sid>
+    <description>CRITICAL: Data exfiltration confirmed - transfer tool making repeated outbound connections</description>
+    <group>exfiltration_confirmed,</group>
+    <mitre><id>T1048</id><id>T1560</id></mitre>
+  </rule>
+
+  <rule id="100421" level="15" frequency="8" timeframe="120">
+    <if_matched_sid>100403</if_matched_sid>
+    <description>CRITICAL: Data exfiltration confirmed - sustained PowerShell upload campaign detected</description>
+    <group>exfiltration_confirmed,</group>
+    <mitre><id>T1048</id><id>T1059.001</id></mitre>
+  </rule>
+
+  <rule id="100422" level="15" frequency="2" timeframe="120">
+    <if_matched_sid>100411</if_matched_sid>
+    <description>CRITICAL: Data exfiltration confirmed - repeated data staging with archive files detected</description>
+    <group>exfiltration_confirmed,</group>
+    <mitre><id>T1048</id><id>T1560</id></mitre>
+  </rule>
+
+</group>
