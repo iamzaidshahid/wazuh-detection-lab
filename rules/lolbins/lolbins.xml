@@ -1,0 +1,133 @@
+<!--
+Living off the land (LOLBins) abuse detection via Sysmon event 1.
+ATT&CK: T1218, T1218.005, T1218.007, T1218.010, T1218.011, T1003.001, T1105, T1197, T1047, T1490, T1027
+Layer 1: single events (100500 to 100506)
+Layer 2: frequency (100510 to 100512)
+Layer 3: critical (100520 to 100522)
+Lab status: 8 of 13 rules verified (certutil, regsvr32 and wmic were
+unavailable on the test host).
+Rule 100512 uses if_matched_group on the group named lolbins, so this group
+wrapper name must stay as is.
+-->
+<group name="local,lolbins,">
+
+  <rule id="100500" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)certutil\.exe</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(-urlcache|-decode|-encode|-split|http|ftp)</field>
+    <description>Certutil abused for file download or encoding - possible LOLBin attack</description>
+    <group>lolbin_certutil,</group>
+    <mitre><id>T1105</id><id>T1027</id></mitre>
+  </rule>
+
+  <rule id="100501" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)regsvr32\.exe</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(/s|/u|/i|scrobj|http|ftp|\\\\)</field>
+    <description>Regsvr32 executing remote or suspicious script - possible LOLBin attack</description>
+    <group>lolbin_regsvr32,</group>
+    <mitre><id>T1218.010</id></mitre>
+  </rule>
+
+  <rule id="100502" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)mshta\.exe</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(http|ftp|javascript|vbscript|\\\\)</field>
+    <description>Mshta executing remote or script content - possible LOLBin attack</description>
+    <group>lolbin_mshta,</group>
+    <mitre><id>T1218.005</id></mitre>
+  </rule>
+
+  <rule id="100503" level="13">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)rundll32\.exe</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(comsvcs|javascript|http|MiniDump|shell32|pcwutl)</field>
+    <description>Rundll32 abused for malicious execution or LSASS dump - possible LOLBin attack</description>
+    <group>lolbin_rundll32,</group>
+    <mitre><id>T1218.011</id><id>T1003.001</id></mitre>
+  </rule>
+
+  <rule id="100504" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)bitsadmin\.exe</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(/transfer|/download|/addfile|http|ftp)</field>
+    <description>Bitsadmin used for file download - possible LOLBin malware delivery</description>
+    <group>lolbin_bitsadmin,</group>
+    <mitre><id>T1197</id><id>T1105</id></mitre>
+  </rule>
+
+  <rule id="100505" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)wmic\.exe</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(process call create|/node|/format|http|shadowcopy delete)</field>
+    <description>WMIC executing suspicious command - possible LOLBin attack</description>
+    <group>lolbin_wmic,</group>
+    <mitre><id>T1047</id><id>T1490</id></mitre>
+  </rule>
+
+  <rule id="100506" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName"
+    type="pcre2">(?i)msiexec\.exe</field>
+    <field name="win.eventdata.commandLine"
+    type="pcre2">(?i)(http|ftp|/q|/quiet|/i.*http)</field>
+    <description>Msiexec executing remote or silent package - possible LOLBin attack</description>
+    <group>lolbin_msiexec,</group>
+    <mitre><id>T1218.007</id></mitre>
+  </rule>
+
+  <rule id="100510" level="14" frequency="2" timeframe="120">
+    <if_matched_sid>100500</if_matched_sid>
+    <description>Multiple certutil LOLBin executions - active attack campaign in progress</description>
+    <group>lolbin_repeated,</group>
+    <mitre><id>T1105</id></mitre>
+  </rule>
+
+  <rule id="100511" level="14" frequency="2" timeframe="120">
+    <if_matched_sid>100503</if_matched_sid>
+    <description>Multiple rundll32 abuse attempts - possible repeated LSASS dump or execution</description>
+    <group>lolbin_repeated,</group>
+    <mitre><id>T1218.011</id><id>T1003.001</id></mitre>
+  </rule>
+
+  <rule id="100512" level="14" frequency="5" timeframe="180">
+    <if_matched_group>lolbins</if_matched_group>
+    <description>Same LOLBin tool used repeatedly in short timeframe - persistent abuse detected</description>
+    <group>lolbin_repeated,</group>
+    <mitre><id>T1218</id><id>T1197</id></mitre>
+  </rule>
+
+  <rule id="100520" level="15" frequency="3" timeframe="180">
+    <if_matched_sid>100510</if_matched_sid>
+    <description>CRITICAL: Sustained LOLBin certutil campaign - confirmed APT living off the land attack</description>
+    <group>lolbin_confirmed,</group>
+    <mitre><id>T1105</id><id>T1027</id></mitre>
+  </rule>
+
+  <rule id="100521" level="15" frequency="2" timeframe="120">
+    <if_matched_sid>100511</if_matched_sid>
+    <description>CRITICAL: Repeated LSASS credential dump via rundll32 - all Windows passwords at risk</description>
+    <group>lolbin_confirmed,</group>
+    <mitre><id>T1003.001</id><id>T1218.011</id></mitre>
+  </rule>
+
+  <rule id="100522" level="15" frequency="3" timeframe="180">
+    <if_matched_group>lolbin_repeated</if_matched_group>
+    <description>CRITICAL: Coordinated LOLBin attack confirmed - APT using multiple built-in tools</description>
+    <group>lolbin_confirmed,</group>
+    <mitre><id>T1218</id></mitre>
+  </rule>
+
+</group>
