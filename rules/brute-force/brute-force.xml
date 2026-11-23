@@ -1,5 +1,5 @@
 <!--
-Brute force detection and login success correlation (SSH).
+Brute force and login success correlation rules (SSH).
 ATT&CK: T1110, T1110.001, T1078
 Stage 1: single failure catchers (100002, 100004)
 Stage 2: frequency escalation (100003, 100005)
