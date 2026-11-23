@@ -1,8 +1,8 @@
-# wazuh-detection-lab
+# wazuh-siem-lab
 
-Custom Wazuh detection rules mapped to MITRE ATT&CK, built and tested in a personal lab with Sysmon endpoint telemetry.
+Custom Wazuh correlation rules mapped to MITRE ATT&CK, built and tested in a personal lab with Sysmon endpoint telemetry.
 
-## Detections
+## Use cases
 | Use case | Rules | ATT&CK | Folder |
 |---|---|---|---|
 | Brute force and login success | 6 | T1110, T1078 | `rules/brute-force/` |
@@ -15,15 +15,10 @@ Every use case follows the same three stages: single-event catchers, frequency e
 
 ## Lab stack
 - **Wazuh SIEM:** manager on Kali Linux, Windows endpoint agent
-- **Sysmon:** endpoint telemetry feeding the detections
+- **Sysmon:** endpoint telemetry feeding the rules
 - **VirusTotal:** automated enrichment of suspicious files
-- **Grafana and IRIS:** dashboards and case tracking
-
-## Repository structure
-- `rules/`: custom Wazuh rules (XML), one folder per use case
-- `sysmon/`: Sysmon configuration additions the rules depend on
-- `tests/`: safe test commands for each rule
-- `docs/`: write-ups with problems hit and fixes applied
+- **Grafana:** security dashboards
+- **IRIS:** incident and case tracking
 
 ## Evidence
 Alerts fired by the custom rules in the lab (Wazuh dashboard):
@@ -39,6 +34,33 @@ Alerts fired by the custom rules in the lab (Wazuh dashboard):
 
 **LOLBins abuse**
 ![LOLBins alert](docs/images/lolbins-alert.png)
+
+## Dashboards
+Grafana dashboards built on Wazuh alert data from the lab. [See all six](docs/dashboards.md).
+
+**Alerts by MITRE ATT&CK tactic**
+![Alerts by MITRE tactic](docs/images/grafana-dashboard-1.png)
+
+**Top 10 alerts by rule**
+![Top 10 alerts by rule](docs/images/grafana-dashboard-2.png)
+
+**Critical Sysmon alerts**
+![Critical Sysmon alerts](docs/images/grafana-dashboard-3.png)
+
+## Case management
+Wazuh alerts are forwarded to IRIS for case tracking.
+
+**Wazuh alert in IRIS, with ATT&CK tactics**
+![Wazuh alert in IRIS](docs/images/iris.png)
+
+**Alert severity breakdown in IRIS**
+![IRIS alert severity](docs/images/iris-5.png)
+
+## Repository structure
+- `rules/`: custom Wazuh rules (XML), one folder per use case
+- `sysmon/`: Sysmon configuration additions the rules depend on
+- `tests/`: safe test commands for each rule
+- `docs/`: dashboards and supporting images
 
 ## Known limitations
 - Tests simulate behavior and verify the rules fire; they are not live malware.
